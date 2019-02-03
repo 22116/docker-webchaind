@@ -1,0 +1,9 @@
+version: 3.3
+services:
+  webchaind:
+    image: 22116/webchaind
+    environment:
+      IS_FAST: 0
+    volumes:
+      - /home/user/coin/private:/data/private
+      - /home/user/coin/password:/data/password
