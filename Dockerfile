@@ -1,14 +1,26 @@
-FROM golang:1.9.1
+FROM golang:1.12-alpine as builder
 
-MAINTAINER Fedorenko Victor <fedorenko22116@gmail.com>
+RUN apk add --no-cache make gcc musl-dev linux-headers git bash cargo
 
-RUN apt-get update && apt-get install -y build-essential
+ENV GOPATH=/go
+RUN mkdir -p /go/src/github.com/webchain-network/webchaind
 
-RUN go get -v github.com/webchain-network/webchaind/...
-RUN go install github.com/webchain-network/webchaind/cmd/webchaind
+WORKDIR /go/src/github.com/webchain-network
 
-COPY docker-entrypoint.sh /usr/local/bin/
+RUN git clone https://github.com/webchain-network/webchaind
 
+WORKDIR /go/src/github.com/webchain-network/webchaind
+
+RUN make cmd/webchaind
+
+# Pull webchaind into a second stage deploy alpine container
+FROM alpine:latest
+
+RUN apk update && apk add --no-cache ca-certificates rust-stdlib bash
+COPY --from=builder /go/src/github.com/webchain-network/webchaind/bin/webchaind /usr/sbin/
+
+COPY docker-entrypoint.sh /usr/bin/
+RUN chmod 755 /usr/bin/docker-entrypoint.sh
+
+EXPOSE 39573 31440 31440/udp
 ENTRYPOINT ["docker-entrypoint.sh"]
-
-EXPOSE 39573
